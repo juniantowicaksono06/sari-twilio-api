@@ -55,10 +55,10 @@
         const urlParams = new URLSearchParams(window.location.search);
         var nomorHP = urlParams.get('nomor')
         window.addEventListener('load', function() {
-            window.addEventListener("flutterInAppWebViewPlatformReady", function(event) {
-                window.flutter_inappwebview
-                      .callHandler('handleStop', 'endCall');
-            });
+            // window.addEventListener("flutterInAppWebViewPlatformReady", function(event) {
+            //     window.flutter_inappwebview
+            //           .callHandler('handleStop', 'endCall');
+            // });
             nomorHP = nomorHP.trim()
             if(!nomorHP.startsWith('+')) {
                 if(nomorHP.startsWith('62')) {
