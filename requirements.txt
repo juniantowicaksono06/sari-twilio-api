@@ -1,0 +1,6 @@
+flask
+twilio
+python-dotenv
+requests
+Jinja2
+certifi
