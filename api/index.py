@@ -1,5 +1,5 @@
 from flask import Flask, render_template, jsonify
-from flask import request, Markup
+from flask import request
  
 from twilio.jwt.access_token import AccessToken
 from twilio.jwt.access_token.grants import VoiceGrant
@@ -65,13 +65,3 @@ def call():
         dial = Dial(callerId=caller)
         dial.client(twilio_number)
     return ''
-
-
-@app.route('/tes', methods=['POST'])
-def tes():
-    resp = VoiceResponse()
-    message = "Hello this is SARI. Leave a message and i will talk with you later"
-    resp.say(message, voice='female')
-    resp.record()
-    resp.hangup()
-    return str(resp)
