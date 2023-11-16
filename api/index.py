@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, make_response, send_file, jsonify
 from flask import request
  
 from twilio.jwt.access_token import AccessToken
@@ -8,7 +8,6 @@ from twilio.twiml.voice_response import VoiceResponse, Dial
 from dotenv import load_dotenv
 import os
 import pprint as p
-from response import return_response
 load_dotenv()
 
 account_sid = os.environ['TWILIO_ACCOUNT_SID']
@@ -18,6 +17,29 @@ twiml_app_sid = os.environ['TWIML_APP_SID']
 twilio_number = os.environ['TWILIO_NUMBER']
 
 app = Flask(__name__)
+
+def return_response(status_code = 200, message: str = None, data: dict or list = None, response_type = "json", filepath = None, attachment=True, preflight=False):
+    if not preflight:
+        if response_type == "json":
+            obj = {
+                "status_code": status_code
+            }
+            if data is not None:
+                obj['data'] = data
+            
+            if message is not None:
+                obj['message'] = message
+                
+            response = make_response(jsonify(obj))
+            response.status_code = status_code
+        elif response_type == 'file' and filepath is not None: 
+            response = send_file(filepath, as_attachment=attachment)
+    else:
+        response = make_response()
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "*")
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    return response
 
 @app.route('/')
 def home():
