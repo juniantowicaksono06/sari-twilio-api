@@ -47,6 +47,12 @@ def home():
         'home.html',
         title="In browser calls",
     )
+@app.route('/sari_webview_call', methods=["GET", "OPTIONS"])
+def call_webview():
+    return render_template(
+        'sari_webview.html',
+        title="SARI WebView Call"
+    )
 
 @app.route('/token', methods=['GET', 'OPTIONS'])
 def get_token():
@@ -87,3 +93,6 @@ def call():
         dial = Dial(callerId=caller)
         dial.client(twilio_number)
     return ''
+
+# if __name__ == "__main__":
+#     app.run(host='0.0.0.0', port=5000, debug=True)

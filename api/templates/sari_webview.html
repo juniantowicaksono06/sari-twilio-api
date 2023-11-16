@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>SARI WebView Call</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+        .container, .container > .card {
+            height: 100%;
+        }
+        #modal-call-in-progress-body {
+            background-image: url('/static/images/user.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: bottom;
+            background-color: #c5c5c5;
+        }
+        #callDuration {
+            margin-left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <div id="callDuration" class="text-center">00:00</div>
+            </div>
+            <div class="card-body" id="modal-call-in-progress-body">
+                <div class="mx-auto">
+                    <h4 id="txtPhoneNumber" style="text-align: center;"></h4>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-center">
+                    <button type="button" class="btn btn btn-default btn-circle btnHangUp" id="btnHangUp">
+                        <i class="fa fa-phone fa-1x fa-rotate-icon" aria-hidden="true" style="color: red;"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js" integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript" src="https://media.twiliocdn.com/sdk/js/client/v1.8/twilio.min.js"></script>
+    <!-- <script type="text/javascript" src="/static/js/main.js"></script> -->
+    <!-- <script type="text/javascript" src="/static/js/modals.js" defer></script> -->
+    <script>
+        var device = null;
+        const urlParams = new URLSearchParams(window.location.search);
+        var nomorHP = urlParams.get('nomor')
+        window.addEventListener('load', function() {
+            nomorHP = nomorHP.trim()
+            if(!nomorHP.startsWith('+')) {
+                if(nomorHP.startsWith('62')) {
+                    nomorHP = `+${nomorHP}`
+                }
+                else if(nomorHP.startsWith("8")) {
+                    nomorHP = nomorHP.substring(1)
+                    nomorHP = `+62${nomorHP}`
+                }
+                else if( nomorHP.startsWith('08')) {
+                    nomorHP = nomorHP.slice(1, nomorHP.split('').length)
+                    nomorHP = `+62${nomorHP}`
+                }
+            }
+            if(!nomorHP.startsWith('+62') && !nomorHP.startsWith('08')) {
+                alert("Nomor HP tidak valid")
+                return
+            }
+            txtPhoneNumber.innerText = nomorHP
+            btnHangUp.addEventListener('click', function() {
+                if(device != null) {
+                    device.disconnectAll()
+                }
+            })
+            dialing()
+        })
+        var time = null;
+        function showCallDuration() {
+            let output = document.getElementById('callDuration');
+            let ms = 0;
+            let sec = 0;
+            let min = 0;
+
+            function timer() {
+                ms++;
+                if (ms >= 100) {
+                    sec++
+                    ms = 0
+                }
+                if (sec === 60) {
+                    min++
+                    sec = 0
+                }
+                if (min === 60) {
+                    ms,
+                        sec,
+                        min = 0;
+                }
+
+                let milli = ms < 10 ? `0` + ms : ms;
+                let seconds = sec < 10 ? `0` + sec : sec;
+                let minute = min < 10 ? `0` + min : min;
+
+                let timer = `${minute}:${seconds}`;
+                output.innerHTML = timer;
+            };
+
+            //Start timer
+            function start() {
+                time = setInterval(timer, 10);
+            }
+
+            //stop timer
+            function stop() {
+                clearInterval(time)
+            }
+            
+            //reset timer
+            function reset() {
+                ms = 0;
+                sec = 0;
+                min = 0;
+
+                output.innerHTML = `00:00:00`
+            }
+
+            // start the timer
+            start()
+
+            $("#modal-call-in-progress").on('hidden.bs.modal', function () {
+                stop()
+            });
+
+        }
+        function dialing() {
+            fetch("https://sari-twilio-api.vercel.app/token", {
+                method: 'GET',
+                headers: {
+                    "Content-Type": 'application/json'
+                }
+            })
+            .then((response) => response.json())
+            .then((result) => {
+                let new_data = result['data']
+                device = new Twilio.Device(new_data.token, {
+                    // Set Opus as our preferred codec. Opus generally performs better, requiring less bandwidth and
+                    // providing better audio quality in restrained network conditions. Opus will be default in 2.0.
+                    codecPreferences: ["opus", "pcmu"],
+                    // Use fake DTMF tones client-side. Real tones are still sent to the other end of the call,
+                    // but the client-side DTMF tones are fake. This prevents the local mic capturing the DTMF tone
+                    // a second time and sending the tone twice. This will be default in 2.0.
+                    fakeLocalDTMF: true,
+                    // Use `enableRingingState` to enable the device to emit the `ringing`
+                    // state. The TwiML backend also needs to have the attribute
+                    // `answerOnBridge` also set to true in the `Dial` verb. This option
+                    // changes the behavior of the SDK to consider a call `ringing` starting
+                    // from the connection to the TwiML backend to when the recipient of
+                    // the `Dial` verb answers.
+                    enableRingingState: true,
+                    debug: true,
+                })
+
+                device.on("ready", (device) => {
+                    console.log("Twilio is Ready")
+                    var params = {
+                        To: nomorHP
+                    }
+                    console.log("Prepare to make a call...")
+                    var outgoingConnection = device.connect(params)
+                    outgoingConnection.on("ringing", function () {
+                        console.log("Phone is ringing")
+                    });
+                });
+
+                device.on("error", (error) => {
+                    alert("Error when try to make a call!")
+                });
+
+                device.on("connect", (conn) => {
+                    setTimeout(() => {
+                        showCallDuration()
+                    }, 200)
+                });
+
+                device.on("disconnect", (conn) => {
+                    // $('.modal').modal('hide')
+                    // if(time != null) {
+                    clearInterval(time)
+                    // }
+                    device.disconnectAll()
+                });
+            })
+        }
+    </script>
+</body>
+</html>
